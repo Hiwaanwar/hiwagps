@@ -1,0 +1,152 @@
+package com.example.offlinemap;
+
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.os.Build;
+import android.os.Bundle;
+import android.os.Environment;
+import android.widget.Button;
+import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+
+import org.osmdroid.config.Configuration;
+import org.osmdroid.tileprovider.cachemanager.CacheManager;
+import org.osmdroid.tileprovider.tilesource.XYTileSource;
+import org.osmdroid.util.BoundingBox;
+import org.osmdroid.util.GeoPoint;
+import org.osmdroid.views.MapView;
+
+import java.io.File;
+
+public class MainActivity extends AppCompatActivity {
+
+    private MapView map;
+    private Button downloadBtn;
+    private static final int REQ_STORAGE = 100;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        // 1. طلب إذن التخزين (ضروري لقراءة وكتابة ملفات الخريطة)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                                Manifest.permission.READ_EXTERNAL_STORAGE},
+                        REQ_STORAGE);
+            }
+        }
+
+        // 2. إعداد مسار التخزين لـ osmdroid
+        Configuration.getInstance().setOsmdroidBasePath(
+                new File(Environment.getExternalStorageDirectory(), "osmdroid"));
+        Configuration.getInstance().setOsmdroidTileCache(
+                new File(Environment.getExternalStorageDirectory(), "osmdroid/tiles"));
+
+        setContentView(R.layout.activity_main);
+
+        map = findViewById(R.id.map);
+        downloadBtn = findViewById(R.id.downloadBtn);
+
+        // 3. تعيين مصدر الخريطة المحلي
+        XYTileSource offlineSource = new XYTileSource(
+                "MapQuest", 0, 18, 256, ".jpg", new String[]{}
+        );
+        map.setTileSource(offlineSource);
+        map.setMultiTouchControls(true);
+
+        // 4. السماح بالشبكة أولاً (لتنزيل البلاطات)
+        map.setUseDataConnection(true);
+
+        // 5. نقطة المركز (استبدلها بإحداثيات منطقتك)
+        map.getController().setZoom(13.0);
+        map.getController().setCenter(new GeoPoint(33.3152, 44.3661));
+
+        // 6. عند النقر على الزر، ابدأ التنزيل
+        downloadBtn.setOnClickListener(v -> downloadMyArea());
+    }
+
+    /**
+     * تنزيل بلاطات الخريطة للمنطقة المحددة
+     */
+    public void downloadMyArea() {
+        // ⚠️ استبدل هذه الإحداثيات بحدود منطقتك الفعلية
+        // الترتيب: شمال، جنوب، شرق، غرب
+        BoundingBox box = new BoundingBox(
+                33.40,  // north
+                33.25,  // south
+                44.45,  // east
+                44.25   // west
+        );
+
+        CacheManager cm = new CacheManager(map);
+
+        Toast.makeText(this, "بدأ التنزيل...", Toast.LENGTH_SHORT).show();
+
+        cm.downloadAreaAsync(this, box, 10, 16, new CacheManager.CacheManagerCallback() {
+            @Override
+            public void onTaskComplete() {
+                map.setUseDataConnection(false);
+                runOnUiThread(() ->
+                        Toast.makeText(MainActivity.this,
+                                "اكتمل التنزيل! أصبح التطبيق دون اتصال الآن.",
+                                Toast.LENGTH_LONG).show()
+                );
+            }
+
+            @Override
+            public void onTaskFailed(int errors) {
+                runOnUiThread(() ->
+                        Toast.makeText(MainActivity.this,
+                                "فشل التنزيل، عدد الأخطاء: " + errors,
+                                Toast.LENGTH_LONG).show()
+                );
+            }
+
+            @Override
+            public void updateProgress(int progress, int currentZoomLevel,
+                                       int zoomMin, int zoomMax) {
+                // يمكنك إضافة شريط تقدم هنا
+            }
+
+            @Override
+            public void downloadStarted() { }
+
+            @Override
+            public void setPossibleTilesInArea(int total) { }
+        });
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQ_STORAGE) {
+            if (grantResults.length > 0
+                    && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // تم منح الإذن، يمكنك إعادة تشغيل التطبيق أو المتابعة
+            } else {
+                Toast.makeText(this, "بدون إذن التخزين لن تعمل الخريطة دون اتصال",
+                        Toast.LENGTH_LONG).show();
+            }
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        map.onResume();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        map.onPause();
+    }
+}
