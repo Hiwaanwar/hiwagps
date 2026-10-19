@@ -1,4 +1,15 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'com.example.offlinemap'
+    compileSdk 34
+    defaultConfig {
+        applicationId "com.example.offlinemap"
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+    }
+}
 dependencies {
-    implementation 'org.maplibre.gl:android-sdk:11.0.0'  // عرض الخرائط
-    implementation 'com.graphhopper:graphhopper-core:8.0' // التوجيه
+    implementation 'org.osmdroid:osmdroid-android:6.1.18'
 }
