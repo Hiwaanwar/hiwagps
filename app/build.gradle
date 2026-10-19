@@ -1,0 +1,4 @@
+dependencies {
+    implementation 'org.maplibre.gl:android-sdk:11.0.0'  // عرض الخرائط
+    implementation 'com.graphhopper:graphhopper-core:8.0' // التوجيه
+}
