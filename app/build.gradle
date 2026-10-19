@@ -1,7 +1,11 @@
-plugins { id 'com.android.application' }
+plugins {
+    id 'com.android.application'
+}
+
 android {
     namespace 'com.example.offlinemap'
     compileSdk 34
+
     defaultConfig {
         applicationId "com.example.offlinemap"
         minSdk 24
@@ -9,7 +13,21 @@ android {
         versionCode 1
         versionName "1.0"
     }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
 }
+
 dependencies {
-    implementation 'org.osmdroid:osmdroid-android:6.1.18'
+    // تبعية osmdroid الأساسية (أحدث إصدار مستقر 6.1.20)
+    implementation 'org.osmdroid:osmdroid-android:6.1.20'
 }
